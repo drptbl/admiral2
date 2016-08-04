@@ -1,0 +1,16 @@
+{
+  "name": "admiral-2",
+  "private": true,
+  "scripts": {
+    "start": "meteor run"
+  },
+  "dependencies": {
+    "lodash": "^4.14.1",
+    "meteor-node-stubs": "~0.2.0",
+    "moment": "^2.14.1",
+    "react": "^15.3.0",
+    "react-addons-css-transition-group": "^15.3.0",
+    "react-addons-pure-render-mixin": "^15.3.0",
+    "react-dom": "^15.3.0"
+  }
+}
