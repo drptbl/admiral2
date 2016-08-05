@@ -127,7 +127,7 @@ Meteor.startup(() => {
         this.request.body.phase = info.phase._id;
         this.request.body.phase_name = this.params.phase;
         this.request.body.start = new Date();
-        this.request.body.stateTimes = {};
+        this.request.body.stepTimes = {};
         this.request.body.metric = this.request.body.metric || {};
         const trId = TestRun.insert(this.request.body);
         _jsonResponse(this.response, {_id: trId});
@@ -148,13 +148,13 @@ Meteor.startup(() => {
       }
     });
 
-  // Sets the run state
-  Router.route('/api/project/:project/:phase/run/:run/state', {where: 'server'})
+  // Sets the run step
+  Router.route('/api/project/:project/:phase/run/:run/step', {where: 'server'})
     .post(function () {
       const run = TestRun.findOne({_id: this.params.run});
       const setObj = {};
-      setObj.state = this.params.query.state;
-      setObj[`stateTimes.${this.params.query.state}`] = new Date();
+      setObj.step = this.params.query.step;
+      setObj[`stepTimes.${this.params.query.step}`] = new Date();
       if (run) {
         TestRun.update(run._id, {"$set": setObj});
         _jsonResponse(this.response, TestRun.findOne({_id: this.params.run}));
