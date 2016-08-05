@@ -26,10 +26,10 @@ export class RunReport extends React.Component {
     let lastTime = Date.parse(this.props.run.start);
     const times = {};
     for (var i in this.props.project.steps) {
-      if (this.props.project.steps[i].id == this.props.run.state) {
+      if (this.props.project.steps[i].id == this.props.run.step) {
         done = i;
       }
-      let currentTime = this.props.run.stateTimes[this.props.project.steps[i].id];
+      let currentTime = this.props.run.stepTimes[this.props.project.steps[i].id];
       if (currentTime) {
         times[i] = currentTime - lastTime;
         lastTime = currentTime;
