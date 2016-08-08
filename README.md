@@ -4,7 +4,7 @@ Beautiful dashboards for visualizing functional test results.
 ## Install
 
 ```
-% npm Install
+% npm install
 % meteor update
 ```
 
