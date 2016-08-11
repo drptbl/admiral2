@@ -16,7 +16,7 @@ Meteor.startup(() => {
     render(<Layout>{component}</Layout>,
       document.getElementById('app'));
   }
-  
+
   Router.route('/', function () {
     _render(<ProjectsListContainer />);
   });
