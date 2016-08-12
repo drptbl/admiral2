@@ -14,6 +14,20 @@ Beautiful dashboards for visualizing functional test results.
 % meteor
 ```
 
+## Running with docker
+
+First [install docker](https://docs.docker.com/engine/installation/). Then to start mongo DB in one container and admiral2 in another:
+
+```
+% docker-compose up
+```
+
+To shut that down:
+
+```
+% docker-compose down
+```
+
 ## Terminonology
 
 |Term|Definition|
