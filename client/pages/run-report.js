@@ -53,24 +53,19 @@ export class RunReport extends React.Component {
   }
   render() {
     const sortedResults = this.props.results.sort((a, b) => {
-      let fails_a = 0;
+      let score_a = 0;
       for (var k in a.environments) {
-        fails_a += a.environments[k] === 'fail' ? 1 : 0;
+        score_a += a.environments[k].status === 'fail' ? 3 : 0;
+        score_a += a.environments[k].status === 'pass' ? a.environments[k].retryCount * 0.2 : 0;
       }
-      let fails_b = 0;
+      let score_b = 0;
       for (var k in b.environments) {
-        fails_b += b.environments[k] === 'fail' ? 1 : 0;
+        score_b += b.environments[k].status === 'fail' ? 3 : 0;
+        score_b += b.environments[k].status === 'pass' ? b.environments[k].retryCount : 0;
       }
-      if (fails_a > fails_b) {
+      if (score_a > score_b) {
         return -1;
-      }
-      if (fails_b > fails_a) {
-        return 1;
-      }
-
-      if (a.test < b.test) {
-        return -1;
-      } else if (a.test > b.test) {
+      } else if (score_b > score_a) {
         return 1;
       } else {
         return 0;

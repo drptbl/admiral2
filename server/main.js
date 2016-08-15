@@ -22,7 +22,7 @@ const _jsonResponse = (res, data) => {
 const _setBuilder = (input, output, parent) => {
   for (var k in input) {
     if (_.isObject(input[k])) {
-      _setBuilder(input[k], output, `${k}.`);
+      _setBuilder(input[k], output, `${parent}${k}.`);
     } else {
       output[`${parent ? parent : ''}${k}`] = input[k];
     }
@@ -197,6 +197,7 @@ Meteor.startup(() => {
       if (result) {
         const setObj = {}
         _setBuilder(this.request.body, setObj, '');
+        console.log(setObj);
         TestResult.update(result._id, {"$set": setObj});
         _jsonResponse(this.response, TestResult.findOne({_id: result._id}));
       } else {

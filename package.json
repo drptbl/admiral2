@@ -7,6 +7,8 @@
     "docker-down": "docker-compose down",
     "build": "docker build -t walmart/admiral2 ."
   },
+  "author": "jherrington@walmartlabs.com <Jack Herrington>",
+  "license": "MIT",
   "dependencies": {
     "lodash": "^4.14.1",
     "meteor-node-stubs": "~0.2.0",
