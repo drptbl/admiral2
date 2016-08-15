@@ -1,0 +1,13 @@
+admiral2:
+  image: walmart/admiral2
+  ports:
+   - "80:80"
+  links:
+   - mongo
+  environment:
+   - MONGO_URL=mongodb://mongo/admiral2
+   - MONGO_OPLOG_URL=
+   - ROOT_URL=http://localhost
+
+mongo:
+  image: mongo:latest
