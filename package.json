@@ -2,7 +2,10 @@
   "name": "admiral-2",
   "private": true,
   "scripts": {
-    "start": "meteor run"
+    "start": "meteor run",
+    "docker-up": "docker-compose up",
+    "docker-down": "docker-compose down",
+    "docker-build": "docker build -t walmart/admiral2 ."
   },
   "dependencies": {
     "lodash": "^4.14.1",
