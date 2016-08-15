@@ -5,7 +5,7 @@
     "start": "meteor run",
     "docker-up": "docker-compose up",
     "docker-down": "docker-compose down",
-    "docker-build": "docker build -t walmart/admiral2 ."
+    "build": "docker build -t walmart/admiral2 ."
   },
   "dependencies": {
     "lodash": "^4.14.1",
