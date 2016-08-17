@@ -12,7 +12,7 @@ export const buildColumns = (envs) => {
     if (info[0] === "safari") {
       icon = "fa-safari";
     }
-    if (info[0] === "ios") {
+    if (info[0] === "iOS") {
       icon = "fa-apple";
     }
 
