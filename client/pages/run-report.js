@@ -10,6 +10,7 @@ import ResultCell from '../components/result-cell';
 import { Projects } from '../../imports/api/projects';
 import { TestRun } from '../../imports/api/test-run';
 import { TestResult } from '../../imports/api/test-result';
+import { buildColumns } from '../utilities/environments';
 
 const _time = (val) => {
   if (val < 1000) {
@@ -52,6 +53,13 @@ export class RunReport extends React.Component {
     );
   }
   render() {
+    const {columns, colWidth, sections} = buildColumns(this.props.project.environments || [
+      "ie",
+      "chrome",
+      "safari",
+      "ios"
+    ]);
+
     const sortedResults = this.props.results.sort((a, b) => {
       let score_a = 0;
       for (var k in a.environments) {
@@ -71,6 +79,7 @@ export class RunReport extends React.Component {
         return 0;
       }
     });
+
     return (
       <div>
         <h1><ProjectLink project={this.props.run.project_name}/> |&nbsp;
@@ -81,21 +90,22 @@ export class RunReport extends React.Component {
         <table width="100%" className="results-table">
           <thead>
             <tr>
-              <td width="40%">
+              <td width="40%" />
+              {sections.map((sect, index) => (
+                <td key={`section-${index}`} colSpan={sect.cols} style={{textAlign: 'center'}} className="browser">
+                  <i className={`fa ${sect.icon}`} />
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <td>
                 Test name
               </td>
-              <td width="15%" style={{textAlign: 'center'}} className="browser">
-                <i className="fa fa-internet-explorer"></i>
-              </td>
-              <td width="15%" style={{textAlign: 'center'}} className="browser">
-                <i className="fa fa-chrome"></i>
-              </td>
-              <td width="15%" style={{textAlign: 'center'}} className="browser">
-                <i className="fa fa-safari"></i>
-              </td>
-              <td width="15%" style={{textAlign: 'center'}} className="browser">
-                <i className="fa fa-apple"></i>
-              </td>
+              {columns.map((col, index) => (
+                <td width={`${colWidth}%`} style={{textAlign: 'center'}} key={`title-${index}`}>
+                  {col.name}
+                </td>
+              ))}
             </tr>
           </thead>
           <ReactCSSTransitionGroup component="tbody" transitionName="example" transitionEnterTimeout={500} transitionLeaveTimeout={300}>
@@ -104,10 +114,9 @@ export class RunReport extends React.Component {
                 <td>
                   <a href={`/run/${this.props.run._id}/${result._id}`}>{result.test}</a>
                 </td>
-                <ResultCell result={result.environments.ie} />
-                <ResultCell result={result.environments.chrome} />
-                <ResultCell result={result.environments.safari} />
-                <ResultCell result={result.environments.ios} />
+                {columns.map((col, cindex) => (
+                  <ResultCell result={result.environments[col.key]} key={`${index}-${cindex}`} />
+                ))}
               </tr>
             ))}
           </ReactCSSTransitionGroup>
