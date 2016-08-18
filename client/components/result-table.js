@@ -7,7 +7,6 @@ import ResultCell from './result-cell';
 import { buildColumns } from '../utilities/environments';
 
 const ResultTable = (props) => {
-  console.log(props.project.environments);
   const {columns, colWidth, sections} = buildColumns(props.project.environments || [
     "ie",
     "chrome",
