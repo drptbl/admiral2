@@ -11,6 +11,91 @@ import { TestResult } from "../imports/api/test-result";
 
 import _ from 'lodash';
 
+var stats = require("stats-lite");
+
+const _createScore = (result) => {
+  let score = 0;
+  let envCount = 0;
+  for (var k in result.environments) {
+    score += result.environments[k].status === 'fail' ? 3 : 0;
+    score += result.environments[k].status === 'pass' ? result.environments[k].retryCount * 0.2 : 0;
+    envCount++;
+  }
+  result.score = score;
+  result.normalizedScore = envCount > 0 ? parseFloat(score) / parseFloat(envCount) : 0;
+};
+
+const _updateScore = (id) => {
+  const result = TestResult.findOne({_id: id});
+  result.environments = result.environments || {};
+  _createScore(result);
+  TestResult.update(result._id, {"$set": {
+    score: result.score,
+    normalizedScore: result.normalizedScore
+  }});
+  return result;
+}
+
+const _updateAnalytics = (project) => {
+  const results = TestResult.find({project: project._id}).fetch();
+  const scores = [];
+
+  const scoreSets = {};
+  for (let result of results) {
+    _createScore(result);
+    TestResult.update(result._id, {"$set": {
+      score: result.score,
+      normalizedScore: result.normalizedScore
+    }});
+    scores.push(result.score);
+    if (scoreSets[result.test] === undefined) {
+      scoreSets[result.test] = {
+        test: result.test,
+        scores: [],
+        stdevs: []
+      };
+    }
+    scoreSets[result.test].scores.push(result.score);
+  }
+
+  const mean = stats.mean(scores);
+  const stddev = stats.stdev(scores);
+  for (let result of results) {
+    scoreSets[result.test].stdevs.push((result.score - mean) / stddev);
+  }
+
+  let worstTests = [];
+
+  for (let k in scoreSets) {
+    scoreSets[k].overall = {
+      mean: stats.mean(scoreSets[k].scores),
+      stddev: stats.stdev(scoreSets[k].scores),
+    };
+    if (scoreSets[k].overall.stddev > 1) {
+      worstTests.push(scoreSets[k]);
+    }
+  }
+
+  worstTests = worstTests.sort((a, b) => {
+    if (a.overall.stddev < b.overall.stddev) {
+      return -1;
+    } else if (a.overall.stddev > b.overall.stddev) {
+      return 1;
+    } else {
+      return 0;
+    }
+  }).slice(worstTests.length < 5 ? 0 : worstTests.length - 5);
+
+  project.testScores = scoreSets;
+  project.worstTests = worstTests;
+  Projects.update(project._id, {"$set":
+    {
+      testScores: project.testScores,
+      worstTests: project.worstTests
+    }
+  });
+}
+
 const _jsonResponse = (res, data) => {
   const body = JSON.stringify(data);
   res.setHeader('Content-Length', Buffer.byteLength(body, 'utf8'));
@@ -76,6 +161,8 @@ Meteor.startup(() => {
         _jsonResponse(this.response, found);
       } else {
         const data = this.request.body || {};
+        data.created = new Date();
+        data.updated = new Date();
         data.name = this.params.project;
         const project = Projects.insert(data);
         _jsonResponse(this.response, {_id: project});
@@ -84,6 +171,15 @@ Meteor.startup(() => {
     .get(function () {
       const found = Projects.findOne({name: this.params.project});
       _jsonResponse(this.response, found ? found : null);
+    });
+
+  // Gets project info
+  Router.route('/api/project/:project/analytics', {where: 'server'})
+    .post(function () {
+      let project = Projects.findOne({name: this.params.project});
+      _updateAnalytics(project);
+      project = Projects.findOne({name: this.params.project});
+      _jsonResponse(this.response, project);
     });
 
   // Gets the phase info
@@ -109,6 +205,8 @@ Meteor.startup(() => {
         _jsonResponse(this.response, phase);
       } else {
         const newPhase = ProjectPhases.insert({
+          created: new Date(),
+          updated: new Date(),
           project: project._id,
           project_name: this.params.project,
           name: this.params.phase
@@ -122,14 +220,18 @@ Meteor.startup(() => {
     .post(function () {
       const info = _findPhase(this.params.project, this.params.phase, this.response);
       if (info) {
-        this.request.body.project = info.project._id;
-        this.request.body.project_name = this.params.project;
-        this.request.body.phase = info.phase._id;
-        this.request.body.phase_name = this.params.phase;
-        this.request.body.start = new Date();
-        this.request.body.stepTimes = {};
-        this.request.body.metric = this.request.body.metric || {};
-        const trId = TestRun.insert(this.request.body);
+        let data = this.request.body;
+        data.created = new Date();
+        data.updated = new Date();
+        data.status = "running";
+        data.project = Projects.findOne({name: this.params.project})._id;
+        data.project_name = this.params.project;
+        data.phase = info.phase._id;
+        data.phase_name = this.params.phase;
+        data.start = new Date();
+        data.stepTimes = {};
+        data.metric = data.metric || {};
+        const trId = TestRun.insert(data);
         _jsonResponse(this.response, {_id: trId});
       }
     });
@@ -140,8 +242,25 @@ Meteor.startup(() => {
       const run = TestRun.findOne({_id: this.params.run});
       if (run) {
         const setObj = {}
+        setObj.updated = new Date();
         _setBuilder(this.request.body, setObj, '');
         TestRun.update(run._id, {"$set": setObj});
+        _jsonResponse(this.response, TestRun.findOne({_id: this.params.run}));
+      } else {
+        _jsonResponse(this.response, {error: "Test run not found"});
+      }
+    });
+
+  // Finishes the run
+  Router.route('/api/project/:project/:phase/run/:run/finish', {where: 'server'})
+    .post(function () {
+      const run = TestRun.findOne({_id: this.params.run});
+      const setObj = {};
+      setObj.updated = new Date();
+      setObj.status = "finished";
+      if (run) {
+        TestRun.update(run._id, {"$set": setObj});
+        _updateAnalytics(Projects.findOne(run.project));
         _jsonResponse(this.response, TestRun.findOne({_id: this.params.run}));
       } else {
         _jsonResponse(this.response, {error: "Test run not found"});
@@ -153,6 +272,7 @@ Meteor.startup(() => {
     .post(function () {
       const run = TestRun.findOne({_id: this.params.run});
       const setObj = {};
+      setObj.updated = new Date();
       setObj.step = this.params.query.step;
       setObj[`stepTimes.${this.params.query.step}`] = new Date();
       if (run) {
@@ -169,6 +289,7 @@ Meteor.startup(() => {
       const run = TestRun.findOne({_id: this.params.run});
       if (run) {
         const setObj = {};
+        setObj.updated = new Date();
         setObj[`metric.${this.params.query.metric}`] = this.params.query.value;
         TestRun.update(run._id, {"$set": setObj});
         _jsonResponse(this.response, TestRun.findOne({_id: this.params.run}));
@@ -195,24 +316,35 @@ Meteor.startup(() => {
         test: this.request.body.test
       });
       if (result) {
-        const setObj = {}
-        _setBuilder(this.request.body, setObj, '');
-        console.log(setObj);
+        let data = this.request.body;
+        data.updated = new Date();
+        const setObj = {};
+        _setBuilder(data, setObj, '');
+
         TestResult.update(result._id, {"$set": setObj});
+
+        _updateScore(result._id);
+
         _jsonResponse(this.response, TestResult.findOne({_id: result._id}));
       } else {
-        this.request.body.run = testRun._id;
-        this.request.body.run_start = testRun.start;
-        this.request.body.run_name = testRun.name;
-        this.request.body.project = testRun.project;
-        this.request.body.project_name = testRun.project_name;
-        this.request.body.phase = testRun.phase;
-        this.request.body.phase_name = testRun.phase_name;
+        let data = this.request.body;
+        data.created = new Date();
+        data.updated = new Date();
+        data.run = testRun._id;
+        data.run_start = testRun.start;
+        data.run_name = testRun.name;
+        data.project = testRun.project;
+        data.project_name = testRun.project_name;
+        data.phase = testRun.phase;
+        data.phase_name = testRun.phase_name;
 
-        const newId = TestResult.insert(this.request.body);
+        const newId = TestResult.insert(data);
 
         this.request.body._id = newId;
-        _jsonResponse(this.response, this.request.body);
+
+        data = _updateScore(newId);
+
+        _jsonResponse(this.response, data);
       }
     });
 
