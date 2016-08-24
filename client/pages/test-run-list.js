@@ -11,7 +11,7 @@ const TestList = (props) => (
       <div key={index}>{test.test}</div>
     ))}
   </div>
-)
+);
 
 export class TestRunList extends React.Component {
   render() {
@@ -23,7 +23,7 @@ export class TestRunList extends React.Component {
             <a href={`/run/${run._id}`}>{run.name}</a>
           </div>
         ))}
-        {this.props.project ? (
+        {this.props.project && this.props.project.worstTests ? (
           <div>
             <h2>Worst Tests</h2>
             <TestList tests={this.props.project.worstTests} />

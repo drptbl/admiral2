@@ -2,10 +2,12 @@ import React from 'react';
 import { createContainer } from 'meteor/react-meteor-data';
 import ReactCSSTransitionGroup from 'react-addons-css-transition-group';
 import moment from 'moment';
+import _ from 'lodash';
 
 import ResultTable from '../components/result-table';
 import { ProjectLink, PhaseLink } from '../components/links';
 import ResultCell from '../components/result-cell';
+import ComponentGraph from '../components/component-graph';
 
 import { Projects } from '../../imports/api/projects';
 import { TestRun } from '../../imports/api/test-run';
@@ -19,6 +21,33 @@ const _time = (val) => {
     const seconds = Math.floor((val / 100)) / 10.0;
     return `${seconds}s`
   }
+}
+
+const _isRunning = (test) => {
+  for (var k in test.environments) {
+    if (test.environments[k].status === 'started') {
+      return true;
+    }
+  }
+  return false;
+}
+
+const _hasResults = (test) => {
+  for (var k in test.environments) {
+    if (test.environments[k].status === 'fail' || test.environments[k].status === 'pass') {
+      return true;
+    }
+  }
+  return false;
+}
+
+const _failed = (test) => {
+  for (var k in test.environments) {
+    if (test.environments[k].status === 'fail') {
+      return true;
+    }
+  }
+  return false;
 }
 
 export class RunReport extends React.Component {
@@ -52,6 +81,62 @@ export class RunReport extends React.Component {
       </div>
     );
   }
+
+  _componentGraph() {
+    const running = [];
+    const active = {};
+    const passed = {};
+    const failed = {};
+
+    const _add = (obj, key) => {
+      if (obj[key] === undefined) {
+        obj[key] = 0;
+      }
+      obj[key] += 1;
+    }
+    const _addArray = (obj, arr) => {
+      for (let k of arr || []) {
+        _add(obj, k);
+      }
+    };
+
+    const testCount = {};
+    for (let test of this.props.project.tests) {
+      _addArray(testCount, test.components);
+    }
+
+    for (let test of this.props.results) {
+      if (_isRunning(test)) {
+        running.push(test.test);
+        for (let comp of test.components || []) {
+          active[comp] = true;
+        }
+      } else {
+        if (_hasResults(test)) {
+          if (_failed(test)) {
+            _addArray(failed, test.components);
+          } else {
+            _addArray(passed, test.components);
+          }
+        }
+      }
+    }
+
+    const comps = _.cloneDeep(this.props.project.components);
+    for (let k in comps) {
+      comps[k].testCount = testCount[k];
+      comps[k].failed = failed[k] || 0;
+      comps[k].passed = passed[k] || 0;
+      comps[k].active = active[k] || false;
+    }
+
+    return (
+      <div>
+        <ComponentGraph components={comps} height={100} />
+      </div>
+    );
+  }
+
   render() {
     const {columns, colWidth, sections} = buildColumns(this.props.project.environments || [
       "ie",
@@ -87,6 +172,7 @@ export class RunReport extends React.Component {
           {this.props.run.name}</h1>
         {this.props.run ? <div>Started {moment(this.props.run.start).format('M/D/YY - h:mm a')}</div> : null}
         {this._steps()}
+        {this.props.project && sortedResults.length > 0 ? this._componentGraph() : null}
         <table width="100%" className="results-table">
           <thead>
             <tr>
@@ -110,7 +196,7 @@ export class RunReport extends React.Component {
           </thead>
           <ReactCSSTransitionGroup component="tbody" transitionName="example" transitionEnterTimeout={500} transitionLeaveTimeout={300}>
             {sortedResults.map((result, index) => (
-              <tr key={result.test}>
+              <tr key={`${result.test}-${index}`}>
                 <td>
                   <a href={`/run/${this.props.run._id}/${result._id}`}>{result.test}</a>
                 </td>
@@ -134,7 +220,7 @@ export const RunReportContainer = createContainer(({ run }) => {
   }
   return {
     project,
-    run: TestRun.findOne({_id: run}) || {},
+    run: TestRun.findOne({_id: run}) || {_id: ""},
     results: TestResult.find({run: run}).fetch() || []
   };
 }, RunReport);
