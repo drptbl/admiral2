@@ -20,7 +20,7 @@ export class TestRunList extends React.Component {
         <h1><ProjectLink project={this.props.projectName}/> | {this.props.phase}</h1>
         {this.props.runs.map((run, index) => (
           <div key={index}>
-            <a href={`/run/${run._id}`}>{run.name}</a>
+            <a href={`/run/${run._id}`}>{run.name||run._id}</a>
           </div>
         ))}
         {this.props.project && this.props.project.worstTests ? (

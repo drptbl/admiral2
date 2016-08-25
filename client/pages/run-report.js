@@ -52,6 +52,10 @@ const _failed = (test) => {
 
 export class RunReport extends React.Component {
   _steps() {
+    if (!this.props.project || !this.props.project.steps) {
+      return null;
+    }
+
     let done = 0;
     let lastTime = Date.parse(this.props.run.start);
     const times = {};
@@ -83,6 +87,10 @@ export class RunReport extends React.Component {
   }
 
   _componentGraph() {
+    if (!this.props.project || !this.props.project.components) {
+      return null;
+    }
+
     const running = [];
     const active = {};
     const passed = {};
@@ -137,13 +145,18 @@ export class RunReport extends React.Component {
     );
   }
 
+  _findEnvironments() {
+    const envs = {};
+    for (let res of this.props.results) {
+      for (var k of res.environments) {
+        envs[k] = true;
+      }
+    }
+    return _.keys(envs);
+  }
+
   render() {
-    const {columns, colWidth, sections} = buildColumns(this.props.project.environments || [
-      "ie",
-      "chrome",
-      "safari",
-      "ios"
-    ]);
+    const {columns, colWidth, sections} = buildColumns(this.props.project.environments || this._findEnvironments());
 
     const sortedResults = this.props.results.sort((a, b) => {
       let score_a = 0;

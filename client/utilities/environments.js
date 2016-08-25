@@ -5,7 +5,10 @@ export const buildColumns = (envs) => {
   const columns = [];
   for (env of environments) {
     const info = env.split(/\|/);
-    let icon = "fa-internet-explorer";
+    let icon = "fa-fire";
+    if (info[0] === "ie") {
+      icon = "fa-internet-explorer";
+    }
     if (info[0] === "chrome") {
       icon = "fa-chrome";
     }
@@ -14,6 +17,9 @@ export const buildColumns = (envs) => {
     }
     if (info[0] === "iOS") {
       icon = "fa-apple";
+    }
+    if (info[0] === "phantomjs") {
+      icon = "fa-space-shuttle";
     }
 
     const version = info.length > 1 ? info[1] : "";
