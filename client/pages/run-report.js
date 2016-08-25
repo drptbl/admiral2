@@ -148,7 +148,7 @@ export class RunReport extends React.Component {
   _findEnvironments() {
     const envs = {};
     for (let res of this.props.results) {
-      for (var k of res.environments) {
+      for (var k in res.environments) {
         envs[k] = true;
       }
     }
